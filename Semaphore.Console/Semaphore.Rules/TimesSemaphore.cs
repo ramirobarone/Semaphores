@@ -19,7 +19,7 @@ namespace Semaphore.Rules
             throw new NotImplementedException();
         }
 
-        public List<TimesOfSemaphore > Get(int idSemaphore)
+        public List<TimesOfSemaphore> Get(int idSemaphore)
         {
             //calcular tiempos de relleno
             var times = _times.Get(idSemaphore);
@@ -51,7 +51,7 @@ namespace Semaphore.Rules
                                                           "Red"));
                     _currentTime = _currentTime + times.RedTime;
 
-                    i = i 
+                    i = i
                         + times.GreenTime.TotalSeconds
                         + times.YellowTime.TotalSeconds
                         + times.RedTime.TotalSeconds;
@@ -59,7 +59,7 @@ namespace Semaphore.Rules
                 }
 
             }
-            return timesCreated ;
+            return timesCreated;
         }
 
         public bool Save(TimeSemaphore timesSemaphore)

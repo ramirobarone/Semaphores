@@ -5,6 +5,8 @@ using Semaphore.Rules.Intefaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 
 namespace Semaphore.Console
@@ -16,6 +18,9 @@ namespace Semaphore.Console
         static List<TimesOfSemaphore> arraySemaphore;
         static int _currentPosition;
         static string _currentColor;
+        static FlujoEnum _CurrentflujoEnum;
+        static FlujoEnum _InitialflujoEnum;
+        static CancellationTokenSource _cts = new CancellationTokenSource();
         public Program()
         {
         }
@@ -24,6 +29,8 @@ namespace Semaphore.Console
 
             _times = _times = new DataSemaphore();
             timesSemaphore = new TimesSemaphore(_times);
+            _CurrentflujoEnum = FlujoEnum.Automatico;
+
 
             var saved = timesSemaphore.Save(new Models.Entities.TimeSemaphore()
             {
@@ -38,6 +45,7 @@ namespace Semaphore.Console
                 HourEnd = new System.DateTime(2022, 5, 16, 01, 59, 59)
             });
 
+
             arraySemaphore = timesSemaphore.Get(1);
             TimeSpan currentHour = new TimeSpan(DateTime.Now.Hour, DateTime.Now.Minute, DateTime.Now.Second);
 
@@ -45,26 +53,103 @@ namespace Semaphore.Console
                 .Where(x => x.Begin > currentHour && currentHour < x.End)
                 .FirstOrDefault().Id - 1;
 
-            Timer _timer = new Timer(1);
-            _timer.Elapsed += _timer_Elapsed;
-            _timer.Start();
+            System.Console.WriteLine("Ingresar opcion: B, C");
 
-            System.Console.ReadKey();
-        }
-        private static void _timer_Elapsed(object sender, ElapsedEventArgs e)
-        {//falta comparar y mostrar color
-            var signal = new TimeSpan(e.SignalTime.Hour, e.SignalTime.Minute, e.SignalTime.Second);
-            if (signal >= arraySemaphore[_currentPosition].Begin && signal <= arraySemaphore[_currentPosition].End)
+            while (true)
             {
-                if (_currentColor != arraySemaphore[_currentPosition].Color)
+                var Seleccion = System.Console.ReadKey();
+                string _currentSelecction = Seleccion.ToString();
+
+
+                switch (Seleccion.Key.ToString())
                 {
-                    _currentColor = arraySemaphore[_currentPosition].Color;
-                    System.Console.WriteLine(arraySemaphore[_currentPosition].Color);
+                    case "B":
+                        {
+                            break;
+                        }
+                    case "C":
+                        {
+                            break;
+                        }
+                    case "Q":
+                        {
+                            _cts.Cancel();
+                            break;
+                        }
+                    default:
+                        {
+                            Automatic(_cts.Token);
+                            break;
+                        }
                 }
 
             }
+
+            System.Console.ReadKey();
+        }
+        private static Task Automatic(CancellationToken token)
+        {
+            System.Timers.Timer _timer = new(1);
+            _timer.Elapsed += _timer_Elapsed;
+            _timer.Start();
+            if (token.IsCancellationRequested)
+            {
+                
+            }
+            return Task.CompletedTask;
+        }
+        private static void SemitAutomatic()
+        {
+
+        }
+        private static void Manual()
+        {
+
+        }
+        private static void _timer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            CambiarEstadoSemaforo(e, _cts.Token);
+        }
+        private static void CambiarEstadoSemaforo(ElapsedEventArgs e, CancellationToken cancellationToken)
+        {
+            var signal = new TimeSpan(e.SignalTime.Hour, e.SignalTime.Minute, e.SignalTime.Second);
+
+            if (_currentPosition > arraySemaphore.Count)
+            {
+                CambiarColor("Yellow");
+            }
             else
-                _currentPosition++;
+            {
+                if (signal >= arraySemaphore[_currentPosition].Begin && signal <= arraySemaphore[_currentPosition].End)
+                {
+                    if (_currentColor != arraySemaphore[_currentPosition].Color)
+                    {
+                        _currentColor = arraySemaphore[_currentPosition].Color;
+                        CambiarColor(_currentColor);
+                        System.Console.WriteLine(arraySemaphore[_currentPosition].Color);
+                    }
+                }
+                else
+                    _currentPosition++;
+            }
+        }
+        private static void CambiarColor(string color)
+        {
+            ConsoleColor consoleColor = ConsoleColor.Green;
+            switch (color)
+            {
+                case "Yellow":
+                    {
+                        consoleColor = ConsoleColor.Yellow;
+                        break;
+                    }
+                case "Red":
+                    {
+                        consoleColor = ConsoleColor.Red;
+                        break;
+                    }
+            }
+            System.Console.ForegroundColor = consoleColor;
         }
     }
 }

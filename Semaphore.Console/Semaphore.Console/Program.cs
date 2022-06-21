@@ -20,7 +20,10 @@ namespace Semaphore.Console
         static string _currentColor;
         static FlujoEnum _CurrentflujoEnum;
         static FlujoEnum _InitialflujoEnum;
-        static CancellationTokenSource _cts = new CancellationTokenSource();
+        static CancellationTokenSource _ctsAutomatic;
+        static CancellationTokenSource _ctsSemiAutomatic = new CancellationTokenSource();
+        static CancellationTokenSource _ctsManual = new CancellationTokenSource();
+        static System.Timers.Timer _timerAutomatic;
         public Program()
         {
         }
@@ -57,66 +60,91 @@ namespace Semaphore.Console
 
             while (true)
             {
-                var Seleccion = System.Console.ReadKey();
-                string _currentSelecction = Seleccion.ToString();
+                var Seleccion = System.Console.ReadLine();
 
-
-                switch (Seleccion.Key.ToString())
+                switch (Seleccion)
                 {
-                    case "B":
+                    case "A":
                         {
+                            Task.Run(() => Automatic());
                             break;
                         }
-                    case "C":
+                    case "SM":
                         {
+                            SemitAutomatic(_ctsSemiAutomatic.Token);
                             break;
                         }
-                    case "Q":
+                    case "M":
                         {
-                            _cts.Cancel();
+                            System.Console.WriteLine("Ingresar Color");
+                            string color = System.Console.ReadLine();
+                            Task.Run(() => Manual(color));
                             break;
                         }
-                    default:
+                    case "QA":
                         {
-                            Automatic(_cts.Token);
+                            _ctsAutomatic.Cancel();
+                            break;
+                        }
+                    case "QS":
+                        {
+                            _ctsSemiAutomatic.Cancel();
+                            break;
+                        }
+                    case "QM":
+                        {
+                            _ctsManual.Cancel();
                             break;
                         }
                 }
-
             }
 
             System.Console.ReadKey();
         }
-        private static Task Automatic(CancellationToken token)
+        private static void Automatic()
         {
-            System.Timers.Timer _timer = new(1);
-            _timer.Elapsed += _timer_Elapsed;
-            _timer.Start();
-            if (token.IsCancellationRequested)
-            {
-                
-            }
+            _timerAutomatic = new(1);
+            _timerAutomatic.Elapsed += _timer_Elapsed;
+            _timerAutomatic.Start();
+            _ctsAutomatic = new CancellationTokenSource();
+        }
+        private static Task SemitAutomatic(CancellationToken cts)
+        {
+            if (cts.IsCancellationRequested)
+                return Task.CompletedTask;
+
             return Task.CompletedTask;
         }
-        private static void SemitAutomatic()
+        private static void Manual(string color)
         {
-
-        }
-        private static void Manual()
-        {
-
+            string _currentColor = ConsoleColor.White.ToString();
+            if (color != _currentColor)
+            {
+                _currentColor = color;
+                System.Console.ForegroundColor = CambiarColor(color);
+                System.Console.WriteLine(color);
+            }
         }
         private static void _timer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            CambiarEstadoSemaforo(e, _cts.Token);
+            CambiarEstadoSemaforo(e);
         }
-        private static void CambiarEstadoSemaforo(ElapsedEventArgs e, CancellationToken cancellationToken)
+        private static void CambiarEstadoSemaforo(ElapsedEventArgs e)
         {
             var signal = new TimeSpan(e.SignalTime.Hour, e.SignalTime.Minute, e.SignalTime.Second);
 
-            if (_currentPosition > arraySemaphore.Count)
+            if (_ctsAutomatic.IsCancellationRequested)
+            {
+                _timerAutomatic.Elapsed -= _timer_Elapsed;
+                System.Console.WriteLine("Automatico Cancelado");
+                _ctsAutomatic.TryReset();
+                return;
+            }
+            if (_currentPosition == arraySemaphore.Count)
             {
                 CambiarColor("Yellow");
+                System.Console.WriteLine("fin");
+                _timerAutomatic.Elapsed -= _timer_Elapsed;
             }
             else
             {
@@ -133,23 +161,19 @@ namespace Semaphore.Console
                     _currentPosition++;
             }
         }
-        private static void CambiarColor(string color)
+        private static ConsoleColor CambiarColor(string color)
         {
-            ConsoleColor consoleColor = ConsoleColor.Green;
-            switch (color)
-            {
-                case "Yellow":
-                    {
-                        consoleColor = ConsoleColor.Yellow;
-                        break;
-                    }
-                case "Red":
-                    {
-                        consoleColor = ConsoleColor.Red;
-                        break;
-                    }
-            }
+            ConsoleColor consoleColor;
+            if (color == "Green")
+                consoleColor = ConsoleColor.Green;
+            else if (color == "Yellow")
+                consoleColor = ConsoleColor.Yellow;
+            else
+                consoleColor = ConsoleColor.Red;
+
             System.Console.ForegroundColor = consoleColor;
+
+            return consoleColor;
         }
     }
 }
